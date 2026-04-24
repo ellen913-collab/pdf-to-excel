@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import * as XLSX from 'https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs';
 
 export default function Home() {
   const [file, setFile] = useState(null);
@@ -30,15 +29,16 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error || '轉換失敗');
       if (!data.sheets || data.sheets.length === 0) throw new Error(data.message || '找不到表格資料');
 
-      const { utils, write } = await import('https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs');
-      const wb = utils.book_new();
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
       data.sheets.forEach((s, i) => {
         const rows = [];
         if (s.headers?.length) rows.push(s.headers);
         (s.rows || []).forEach(r => rows.push(r));
-        utils.book_append_sheet(wb, utils.aoa_to_sheet(rows), s.name || `工作表${i+1}`);
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, s.name || `工作表${i+1}`);
       });
-      const buf = write(wb, { bookType: 'xlsx', type: 'array' });
+      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([buf], { type: 'application/octet-stream' });
       setDownloadUrl(URL.createObjectURL(blob));
       setDownloadName(file.name.replace(/\.pdf$/i, '') + '.xlsx');
@@ -70,7 +70,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Drop zone */}
         <div
           onDragOver={e=>{e.preventDefault();setDragging(true)}}
           onDragLeave={()=>setDragging(false)}
@@ -83,7 +82,6 @@ export default function Home() {
           <p style={{fontSize:'0.82rem',color:'#6b6560',margin:0}}>或點此選擇檔案（最大 20MB）</p>
         </div>
 
-        {/* File info */}
         {file && (
           <div style={{display:'flex',alignItems:'center',gap:12,background:'#eff6ff',border:'1.5px solid #2563eb',borderRadius:12,padding:'0.8rem 1rem',marginTop:12}}>
             <span style={{fontSize:22}}>📄</span>
@@ -95,7 +93,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Prompt */}
         <div style={{marginTop:14}}>
           <label style={{fontSize:'0.78rem',fontWeight:600,color:'#6b6560',textTransform:'uppercase',letterSpacing:'.04em',display:'block',marginBottom:4}}>補充說明（可留空）</label>
           <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={2}
@@ -103,13 +100,11 @@ export default function Home() {
             style={{width:'100%',border:'1.5px solid #e2ddd8',borderRadius:10,padding:'0.7rem 1rem',fontSize:'0.88rem',fontFamily:'sans-serif',resize:'none',boxSizing:'border-box',background:'#f5f3ef'}} />
         </div>
 
-        {/* Button */}
         <button onClick={convert} disabled={!file||status==='loading'}
           style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'0.85rem',background:'#2563eb',color:'white',border:'none',borderRadius:12,fontSize:'1rem',fontWeight:700,cursor:(!file||status==='loading')?'not-allowed':'pointer',marginTop:14,opacity:(!file||status==='loading')?0.55:1,transition:'opacity .2s'}}>
           {status==='loading' ? '⏳ AI 分析中，請稍候…' : '⚡ 開始轉換'}
         </button>
 
-        {/* Status */}
         {status==='success' && (
           <>
             <div style={{display:'flex',alignItems:'center',gap:8,background:'#f0fdf4',border:'1.5px solid #bbf7d0',borderRadius:12,padding:'0.9rem 1.2rem',marginTop:12,color:'#16a34a',fontWeight:600}}>
